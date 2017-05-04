@@ -7,7 +7,7 @@
 #  REQUIREMENTS: ---
 #          BUGS: ---
 #         NOTES: ---
-#        AUTHOR:  (), @kaltura.com
+#        AUTHOR:  liraz.sharaby@kaltura.com
 #  ORGANIZATION: Kaltura, inc.
 #       CREATED: 05/04/2017 08:48:28 AM EDT
 #      REVISION:  ---
