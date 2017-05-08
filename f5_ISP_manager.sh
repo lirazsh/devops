@@ -15,9 +15,11 @@
 
 #set -o nounset                              # Treat unset variables as an error
 
+_PA_HA_GROUP="PA-HA-Group"
+_NY_HA_GROUP="HA-Group"
 _ISP="None"
 _SITE="None"
-_PA_IP=("192.168.101.3" "192.168.101.2")
+_PA_IP=("192.168.101.3" "192.168.101.4")
 _NY_IP=("192.168.251.251" "192.168.251.3")
 _MASTER="None"
 _VIP_LIST="None"
@@ -38,8 +40,11 @@ function exeCmd () {
 }
 
 function fetchVipList () {
-
-	_VIP_LIST="`ssh $_MASTER tmsh list ltm virtual | grep -i Monit | grep -i $_ISP | awk '{print $3}'`"
+	if [ "$_ISP" != "ALL" ]; then
+		_VIP_LIST="`ssh $_MASTER tmsh list ltm virtual | grep -i Monit | grep -i $_ISP | awk '{print $3}'`"
+	else
+		_VIP_LIST="`ssh $_MASTER tmsh list ltm virtual | grep -i Monit | grep ltm | awk '{print $3}'`"
+	fi
 	
 	echo "Selected VIPs are: "
 	echo $_VIP_LIST
@@ -58,7 +63,7 @@ fi
 }
 
 function selectF5Master () {
-	echo "Please choose a site:"
+	echo "\e[92mPlease choose a site:\e[39m"
 	echo "[1] PA"
 	echo "[2] NY"
 	echo "[8] Back"
@@ -81,10 +86,10 @@ function selectF5Master () {
 	esac
 
 
-	echo "Please wait for a few seconds for the current config to be retrieved and choose the active F5 module:"
+	echo "Please wait for a few seconds for the current config to be retrieved and choose the relevant F5 module:"
 	if [ "$_SITE" == "PA" ]; then
 		echo -e "[1] pa-lb3 (192.168.101.3) "; ssh 192.168.101.3 "tmsh show sys failover"
-		echo -e "[2] pa-lb2 (192.168.101.2) "; ssh 192.168.101.2 "tmsh show sys failover"
+		echo -e "[2] pa-lb4 (192.168.101.4) "; ssh 192.168.101.4 "tmsh show sys failover"
 		echo "[8] Back"
 	fi
 	if [ "$_SITE" == "NY" ]; then
@@ -102,11 +107,11 @@ function selectF5Master () {
 		return 0
 	fi
 	if [ "$_SITE" == "PA" -a "$sel4" == "2" ]; then
-		_MASTER="192.168.101.2"
+		_MASTER="192.168.101.4"
 		return 0
 	fi
 	if [ "$_SITE" == "NY" -a "$sel4" == "1" ]; then
-		_MASTER="192.168.251.4"
+		_MASTER="192.168.251.251"
 		return 0
 	fi
 	if [ "$_SITE" == "NY" -a "$sel4" == "2" ]; then
@@ -122,7 +127,7 @@ exit 1
 
 function querySite () {
 
-	echo "Please select a site: "
+	echo -e "\e[92mPlease select a site: \e[39m"
 	echo "[1] NY"
 	echo "[2] PA"
 	echo "[3] Back"
@@ -149,10 +154,12 @@ function querySite () {
 
 function main () {
 
-echo "Welcome to the ISP-Manager. Please input your selection:"
+echo -e "\e[92mWelcome to the ISP-Manager" 
+echo -e "Please type your selection:\e[39m"
 echo "[1] Enable ISP"
 echo "[2] Disable ISP"
 echo "[3] Get ISP Status"
+echo "[7] Sync changes"
 echo "[9] Exit"
 
 read -p "Your selection: " sel
@@ -165,13 +172,13 @@ case $sel in
 		main
 		fi
 		echo -e "Enabling ISP \"\e[96m$_ISP\e[39m\"..."
-		if [ querySite -ne 0]; then
+		if [ querySite == "0" ]; then
 		echo "SITE query returned an error when attempting to select Site. Aborting...";
 		main
 		fi
-		echo -e "Chose to enable \"\e[96m$_ISP\e[39m\" in site \"\e[96m$_SITE\e[39m\"."
-		userVer
+		#echo -e "Chose to enable \e[96m\"$_ISP\"\e[39m in site \e[96m\"$_SITE\"\e[39m."
 		selectF5Master
+		#userVer
 		enableISP
     ;;
 	2) 
@@ -180,12 +187,12 @@ case $sel in
         echo "ISP query returned an error when attempting to Disable ISP. Aborting...";
         fi
 		echo -e "Disabling ISP \"\e[96m$_ISP\e[39m\"..."
-		if [ querySite -ne 0]; then
+		if [ querySite == "0" ]; then
         echo "SITE query returned an error when attempting to select Site. Aborting...";
         fi
-        echo -e "Chose to disable \"\e[96m$_ISP\e[39m\" in site \"\e[96m$_SITE\e[39m\"."
-		userVer
+        #echo -e "Chose to disable \e[96m\"$_ISP\"\e[39m in site \e[96m\"$_SITE\"\e[39m."
 		selectF5Master
+		#userVer
 		disableISP
 	;;
 	3)
@@ -197,6 +204,9 @@ case $sel in
 		selectF5Master
 		getISP
 		main
+	;;
+	7)
+		syncF5
 	;;
     9) echo "Goodbye..." && exit 0;
     ;;
@@ -213,33 +223,32 @@ main
 
 
 function enableISP () {
-	echo -e "Chose to \e[91menable \"\e[96m$_ISP\e[39m\" in site \"\e[96m$_SITE\e[39m\"."
-    userVer
+	echo -e "Chose to \e[91menable \e[96m\"$_ISP\"\e[39m in site \e[96m\"$_SITE\"\e[39m."
+    #userVer
 	exeCmd "modify" "enabled"
 	echo "Done..."
-	getISP
 }
 
 function disableISP () {
-	echo -e "Chose to \e[91mdisable \"\e[96m$_ISP\e[39m\" in site \"\e[96m$_SITE\e[39m\"."
-    userVer
+	echo -e "Chose to \e[91mdisable \e[96m\"$_ISP\"\e[39m in site \e[96m\"$_SITE\"\e[39m."
+    #userVer
 	exeCmd "modify" "disabled"
 	echo "Done..."
-	getISP
 }
 
 function getISP () {
-	echo -e "You have selected to \e[91mquery \e[39m \"\e[96m$_ISP\e[39m\" in site \"\e[96m$_SITE\e[39m\"."
+	echo -e "You have selected to \e[91mquery \e[39m \e[96m\"$_ISP\"\e[39m in site \e[96m\"$_SITE\"\e[39m."
 	exeCmd "show"
 
 }
 
 function queryISP () {
 
-echo "Please select the ISP:"
+echo -e "\e[92mPlease select the ISP:\e[39m"
 echo "[1] Zayo"
 echo "[2] Cogent"
 echo "[3] L3"
+echo "[7] ALL"
 echo "[8] Back"
 echo "[9] Exit"
 
@@ -251,6 +260,8 @@ case $usel in
 	2) _ISP="Cogent" && echo -e "Selected \"\e[96mCogent\e[39m\" as the ISP";
 	;;
 	3) _ISP="L3" && echo -e "Selected \"\e[96mL3\e[39m\" as the ISP"; 
+	;;
+	7) _ISP="ALL" && echo -e "Selected \"\e[96mALL\e[39m\" ISPs";
 	;; 
 	8) echo "Going back per user\'s request..."; return 1;
 	;;
@@ -269,6 +280,69 @@ esac
 #fi
 
 return 0
+
+}
+
+function sync_to_group () {
+	echo -e "You are about to sync \e[5m\e[91m$_MASTER\e[39m\e[0m to \e[5m\e[93mgroup\e[0m\e[39m."
+	read -p "Are you sure to wish to continue ([N]/y)? " res
+	if [ "$res" != "y" ]; then
+		echo "Aborted..."
+		main
+	fi
+
+	if [ "$_SITE" == "PA" ]; then
+		ssh $_MASTER "tmsh run cm config-sync to-group $_PA_HA_GROUP"
+	fi
+    if [ "$_SITE" == "NY" ]; then
+		ssh $_MASTER "tmsh run cm config-sync to-group $_NY_HA_GROUP"
+	fi
+	echo "Done..."
+    read -p "Press Enter to continue..."
+
+}
+function sync_from_group () {
+	echo -e "You are about to sync \e[5m\e[93mgroup\e[39m\e[0m to \e[5m\e[91m$_MASTER.\e[39m\e[0m"
+	read -p "Are you sure to wish to continue ([N]/y)? " res
+	if [ "$res" != "y"]; then
+		echo "Aborted..."
+	    main
+	fi
+
+	if [ "$_SITE" == "PA" ]; then
+		ssh $_MASTER "tmsh run cm config-sync from-group $_PA_HA_GROUP"
+    fi
+    if [ "$_SITE" == "NY" ]; then
+		ssh $_MASTER "tmsh run cm config-sync from-group $_NY_HA_GROUP"
+    fi
+	echo "Done..."
+	read -p "Press Enter to continue..."
+
+}
+
+function syncF5 () {
+	echo -e "\e[92mPlease select the F5 module to sync from/to:\e[39m"
+	selectF5Master
+	echo "Please select the desired operation:"
+	echo "[1] Sync device to group"
+	echo "[2] Sync group to device"
+	echo "[8] Back"
+	echo "[9] Exit"
+	read -p "Your selection: " user_sel
+	
+	case $user_sel in
+		1) sync_to_group
+		;;
+		2) sync_from_group
+		;;
+		8) main
+		;;
+		9) echo "Goodbye..."; exit 0
+		;;
+		*) echo "Invalid choice, aborting..."; main;
+		;;
+	esac
+	main
 
 }
 
