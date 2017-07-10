@@ -19,7 +19,7 @@ _PA_HA_GROUP="PA-HA-Group"
 _NY_HA_GROUP="HA-Group"
 _ISP="None"
 _SITE="None"
-_PA_IP=("192.168.101.3" "192.168.101.4")
+_PA_IP=("192.168.101.3" "192.168.252.4")
 _NY_IP=("192.168.251.251" "192.168.251.3")
 _MASTER="None"
 _VIP_LIST="None"
@@ -63,7 +63,7 @@ fi
 }
 
 function selectF5Master () {
-	echo "\e[92mPlease choose a site:\e[39m"
+	echo -e "\e[92mPlease choose a site:\e[39m"
 	echo "[1] PA"
 	echo "[2] NY"
 	echo "[8] Back"
@@ -89,7 +89,7 @@ function selectF5Master () {
 	echo "Please wait for a few seconds for the current config to be retrieved and choose the relevant F5 module:"
 	if [ "$_SITE" == "PA" ]; then
 		echo -e "[1] pa-lb3 (192.168.101.3) "; ssh 192.168.101.3 "tmsh show sys failover"
-		echo -e "[2] pa-lb4 (192.168.101.4) "; ssh 192.168.101.4 "tmsh show sys failover"
+		echo -e "[2] pa-lb4 (192.168.252.4) "; ssh 192.168.252.4 "tmsh show sys failover"
 		echo "[8] Back"
 	fi
 	if [ "$_SITE" == "NY" ]; then
@@ -107,7 +107,7 @@ function selectF5Master () {
 		return 0
 	fi
 	if [ "$_SITE" == "PA" -a "$sel4" == "2" ]; then
-		_MASTER="192.168.101.4"
+		_MASTER="192.168.252.4"
 		return 0
 	fi
 	if [ "$_SITE" == "NY" -a "$sel4" == "1" ]; then
