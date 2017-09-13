@@ -46,9 +46,11 @@ function fetchVipList () {
 		_VIP_LIST="`ssh $_MASTER tmsh list ltm virtual | grep -i Monit | grep ltm | awk '{print $3}'`"
 	fi
 	
-	echo "Selected VIPs are: "
-	echo $_VIP_LIST
-	userVer
+	if ! [ $SILENT ]; then
+		 echo "Selected VIPs are: "
+		 echo $_VIP_LIST
+		 userVer
+	fi
 
 }
 
@@ -346,4 +348,88 @@ function syncF5 () {
 
 }
 
-main
+if [ $# -eq 0 ]; then
+	main
+	exit 0;
+elif [ $# -ne 8 ]; then
+	echo "Incorrect number of args given..."
+	exit 1;
+fi
+
+echo "auto run"
+SILENT="true"
+while getopts "i:s:t:o:" opt; do
+	case $opt in
+		i)
+			case $OPTARG in
+				L3)
+					echo "ISP:L3"
+					_ISP="L3"
+				;;
+				ZA)
+					echo "ISP:Zayo"
+					_ISP="Zayo"
+				;;
+				CO)
+					echo "ISP:Cogent"
+					_ISP="Cogent"
+				;;
+				ALL)
+					echo "ISP:ALL"
+					_ISP="ALL"
+				;;
+				*)
+					echo -e "Invalid ISP $OPTARG.\nAvailable ISPs:\n\"L3\" - Level3\n\"ZA\" - Zayo\n\"CO\" - Cogent\n\"ALL\" - All ISPs"
+					exit 1;
+				;;
+			esac
+			
+		;; 
+		s)
+			echo "Site:$OPTARG"
+			_SITE="$OPTARG"
+			if [ "$OPTARG" != "NY" ] && [ "$OPTARG" != "PA" ]; then
+				echo -e "Invalid site: $_SITE";
+				exit 1;
+			fi
+		;;
+		t)
+			echo "Target:$OPTARG"
+			_MASTER="$OPTARG"
+		;;
+		o)
+			echo "OP:$OPTARG"
+			if [ "$OPTARG" == "enable" ]; then
+				_OP="Enable"
+			elif [ "$OPTARG" == "disable" ]; then
+				_OP="Disable"
+			else
+				echo -e "Invalid operation: $OPTARG"
+				exit 1;
+			fi
+		;;
+		*)
+			echo -e "invalid flag -$OPTARG"
+		;;
+	esac
+done;
+
+echo -e "Date:$(date)"
+
+if [ "$_OP" == "Enable" ]; then
+	exeCmd "modify" "enabled"
+elif [ "$_OP" == "Disable" ]; then
+	exeCmd "modify" "disabled"
+fi
+
+exeCmd "show" | grep -e "Ltm::Virtual" -e "State"
+
+#_NY_HA_GROUP="HA-Group"
+#_ISP="None"
+#_SITE="None"
+#_PA_IP=("192.168.101.3" "192.168.252.4")
+#_NY_IP=("192.168.251.251" "192.168.251.3")
+#_MASTER="None"
+#_VIP_LIST="None"
+
+
